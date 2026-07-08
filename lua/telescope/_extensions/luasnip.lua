@@ -48,8 +48,9 @@ end
 
 local function collect()
   local results = {}
-  for ft, items in pairs(ls.get_snippets(nil)) do
-    for _, snip in ipairs(items) do
+  local fts = ls.get_snippet_filetypes()
+  for _, ft in ipairs(fts) do
+    for _, snip in ipairs(ls.get_snippets(ft)) do
       local src = Source.get(snip)
       if src then
         table.insert(results, {
@@ -61,9 +62,7 @@ local function collect()
         })
       end
     end
-  end
-  for ft, items in pairs(ls.get_snippets(nil, { type = "autosnippets" })) do
-    for _, snip in ipairs(items) do
+    for _, snip in ipairs(ls.get_snippets(ft, { type = "autosnippets" })) do
       local src = Source.get(snip)
       if src then
         table.insert(results, {
