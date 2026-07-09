@@ -14,9 +14,9 @@ local conf          = require("telescope.config").values
 local ext_conf      = require("telescope._extensions")
 -- stylua: ignore end
 
-local ls = require("luasnip")
-local Source = require("luasnip.session.snippet_collection.source")
-local snip_location = require("luasnip.extras.snip_location")
+local Source = require 'luasnip.session.snippet_collection.source'
+local ls = require 'luasnip'
+local snip_location = require 'luasnip.extras.snip_location'
 
 local M = {}
 
@@ -54,7 +54,7 @@ local function collect()
       local src = Source.get(snip)
       if src then
         table.insert(results, {
-          ft = "snip",
+          ft = 'snip',
           snippet = snip,
           filetype = ft,
           filename = src.file,
@@ -62,11 +62,11 @@ local function collect()
         })
       end
     end
-    for _, snip in ipairs(ls.get_snippets(ft, { type = "autosnippets" })) do
+    for _, snip in ipairs(ls.get_snippets(ft, { type = 'autosnippets' })) do
       local src = Source.get(snip)
       if src then
         table.insert(results, {
-          ft = "auto",
+          ft = 'auto',
           snippet = snip,
           filetype = ft,
           filename = src.file,
@@ -90,7 +90,7 @@ M.luasnip_fn = function(opts)
 
   local items = collect()
   if vim.tbl_isempty(items) then
-    vim.notify("No snippet sources found. Set loaders_store_source = true", vim.log.levels.WARN)
+    vim.notify('No snippet sources found. Set loaders_store_source = true', vim.log.levels.WARN)
     return
   end
 
@@ -114,49 +114,47 @@ M.luasnip_fn = function(opts)
       entry.value.ft,
       entry.value.snippet.name,
       { entry.value.snippet.trigger, 'TelescopeResultsNumber' },
-      string.format("%s:%s",
-        vim.fn.fnamemodify(entry.value.filename, ":~:."), entry.value.lnum),
+      string.format('%s:%s', vim.fn.fnamemodify(entry.value.filename, ':~:.'), entry.value.lnum),
     }
   end
 
-  pickers.new(opts, {
-    prompt_title = "LuaSnip Sources",
-    finder = finders.new_table({
-      results = items,
-      entry_maker = function(entry)
-        local search_fn = ext_conf._config.luasnip
-            and ext_conf._config.luasnip.search
-            or default_search_text
-        return {
-          value = entry,
-          filename = entry.snippet.trigger,
-          display = make_display,
-          text = string.format(" %s | %s | %s",
-            entry.ft, entry.snippet.name, entry.snippet.description[1] or ''),
-          ordinal = search_fn(entry),
-          preview_command = function(_, bufnr)
-            if opts.preview.check_mime_type then
-              vim.api.nvim_buf_set_option(bufnr, "filetype", entry.filetype)
-            end
-            local ds = entry.snippet:get_docstring()
-            if type(ds) == "string" then
-              ds = vim.split(ds, "\n")
-            end
-            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, ds)
-          end,
-        }
+  pickers
+    .new(opts, {
+      prompt_title = 'LuaSnip Sources',
+      finder = finders.new_table {
+        results = items,
+        entry_maker = function(entry)
+          local search_fn = ext_conf._config.luasnip and ext_conf._config.luasnip.search or default_search_text
+          return {
+            value = entry,
+            filename = entry.snippet.trigger,
+            display = make_display,
+            text = string.format(' %s | %s | %s', entry.ft, entry.snippet.name, entry.snippet.description[1] or ''),
+            ordinal = search_fn(entry),
+            preview_command = function(_, bufnr)
+              if opts.preview.check_mime_type then
+                vim.api.nvim_buf_set_option(bufnr, 'filetype', entry.filetype)
+              end
+              local ds = entry.snippet:get_docstring()
+              if type(ds) == 'string' then
+                ds = vim.split(ds, '\n')
+              end
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, ds)
+            end,
+          }
+        end,
+      },
+      previewer = previewers.display_content.new(opts),
+      sorter = conf.generic_sorter(opts),
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          actions.close(prompt_bufnr)
+          snip_location.jump_to_snippet(action_state.get_selected_entry().value.snippet)
+        end)
+        return true
       end,
-    }),
-    previewer = previewers.display_content.new(opts),
-    sorter = conf.generic_sorter(opts),
-    attach_mappings = function(prompt_bufnr)
-      actions.select_default:replace(function()
-        actions.close(prompt_bufnr)
-        snip_location.jump_to_snippet(action_state.get_selected_entry().value.snippet)
-      end)
-      return true
-    end,
-  }):find()
+    })
+    :find()
 end
 
 -- stylua: ignore start
