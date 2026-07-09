@@ -1,19 +1,17 @@
 # telescope-luasnip
 
-This plugin adds a [LuaSnip](https://github.com/L3MON4D3/LuaSnip) snippet picker to the already-awesome Neovim [Telescope plugin](https://github.com/nvim-telescope/telescope.nvim).
+This plugin adds a [LuaSnip](https://github.com/L3MON4D3/LuaSnip) snippet source picker to the already-awesome Neovim [Telescope plugin](https://github.com/nvim-telescope/telescope.nvim).
 
-This is a port of [fhill2/telescope-ultisnips.nvim](https://github.com/fhill2/telescope-ultisnips.nvim) from Ultisnips to LuaSnip.  Thanks for the simple great idea!
+Shows snippets loaded from files (via `loaders_store_source = true`) for the
+current buffer's filetype — uses the same filetype logic as
+`luasnip.available()`, respecting `ft_func`, `filetype_extend`, and treesitter
+injection languages.
 
-If you find something wrong, please raise an issue or better yet, raise a PR.
+Selecting a snippet jumps directly to its source file and line.
+
+This is a port of [fhill2/telescope-ultisnips.nvim](https://github.com/fhill2/telescope-ultisnips.nvim) from Ultisnips to LuaSnip. Thanks for the simple great idea!
 
 ![telescope-luasnip.nvim in action](screenshot.png)
-
-> [!WARNING]
-> **HELP WANTED**: The original author currently doesn't have much capacity to
-> support users or get the regression tests done at the moment.
->
-> Can you help out?  If so, please feel free to take a look at the Issues,
-> pick up a ticket, and maybe open a PR.
 
 ## Requirements
 
@@ -25,76 +23,81 @@ If you find something wrong, please raise an issue or better yet, raise a PR.
 Install the plugin using your favourite package manager.
 
 ```lua
-use {
+-- lazy.nvim
+{
   "benfowler/telescope-luasnip.nvim",
-  module = "telescope._extensions.luasnip",  -- if you wish to lazy-load
+  dependencies = { "L3MON4D3/LuaSnip", "nvim-telescope/telescope.nvim" },
 }
 ```
 
-Then, you need to tell Telescope about this extension somewhere after your
-`require('telescope').setup()`, by calling:
+Then load the extension after `require('telescope').setup()`:
 
 ```lua
 require('telescope').load_extension('luasnip')
 ```
 
-## Usage
+### Important: source tracking must be enabled
+
+The picker relies on `loaders_store_source = true` in LuaSnip to know where
+each snippet came from:
 
 ```lua
-require'telescope'.extensions.luasnip.luasnip{}
-vim.cmd [[ Telescope luasnip ]]
+require("luasnip").config.setup({
+  loaders_store_source = true,
+})
 ```
 
-or
+## Usage
 
 ```vim
 :Telescope luasnip
 ```
-for windows system
 
-```vim
-:Telescope luasnip disable_ft=true
+```lua
+require('telescope').extensions.luasnip.luasnip {}
 ```
 
 ## Configuration
 
-This Telescope plugin works fine as-is, and requires no further configuration.
+The plugin works fine as-is and requires no further configuration.
 
-However, if you want, you can customise its search behaviour if you wish:
+### Search customization
+
+You can provide a custom `search` function to control what text is used for
+fuzzy matching. The function receives an entry with these fields:
+
+| Field      | Description                          |
+|------------|--------------------------------------|
+| `snippet`  | LuaSnip snippet object               |
+| `ft`       | `"snip"` or `"auto"`                 |
+| `filetype` | The filetype the snippet belongs to  |
+| `filename` | Source file path                      |
+| `lnum`     | Source line number                    |
+
+Example:
 
 ```lua
-local lst = require('telescope').extensions.luasnip
-local luasnip = require('luasnip')
-
 require('telescope').setup {
   extensions = {
-    -- ...
     luasnip = {
       search = function(entry)
-        return lst.filter_null(entry.context.trigger) .. " " ..
-               lst.filter_null(entry.context.name) .. " " ..
-               entry.ft .. " " ..
-               lst.filter_description(entry.context.name, entry.context.description) ..
-               lst.get_docstring(luasnip, entry.ft, entry.context)[1]
-      end
+        return entry.snippet.trigger .. " " .. entry.filetype
+      end,
     },
-     -- ...
-  }
+  },
 }
 ```
 
-To change theme, try:
+Default search text is: `trigger + name + ft + description`.
+
+### Theme
+
 ```lua
 require('telescope').setup {
-  luasnip = require("telescope.themes".get_dropdown({
-      border   = false,
-      preview  = {
-        check_mime_type  = true
-      },
-      search = function ()
-        -- ...
-      end
-    }))
+  luasnip = require("telescope.themes").get_dropdown({
+    border  = false,
+    preview = { check_mime_type = true },
+  }),
 }
 ```
 
